@@ -5,17 +5,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"log"
 	"fmt"
 	"encoding/json"
-	"net/http"
 	"io/ioutil"
 	"os"
 )
-
-type InstanceDocument struct {
-	Region *string
-}
 
 type DockerConfigAuth struct {
 	Auth  *string `json:"auth"`
@@ -31,7 +27,6 @@ func main() {
 	region := flag.String("region", "", "Region")
 	replace := flag.Bool("replace", false, "Replace the docker config file")
 	config := flag.String("config", "", "Docker Config File")
-	metadata := flag.String("metadata", "http://169.254.169.254", "Meta data endpoint")
 	flag.Parse()
 
 	if len(*config) == 0 {
@@ -40,11 +35,12 @@ func main() {
 	}
 
 	if len(*region) == 0 {
-		instanceDocument, err := getInstanceDocument(*metadata);
-		if err != nil {
-			log.Fatalln(err)
+		metadata := ec2metadata.New(nil)
+		metadataRegion, err := metadata.Region()
+		if err !=nil {
+			fmt.Println("Error: ", err)
 		}
-		region = instanceDocument.Region
+		region = &metadataRegion
 	}
 
 	awsConfig := aws.NewConfig().WithRegion(*region)
@@ -96,22 +92,3 @@ func getDockerConfig(location string) (map[string]*DockerConfigAuth, error) {
 		return nil, err
 	}
 }
-
-// request the content of a http endpoint as a string
-func getInstanceDocument(metadata string) (*InstanceDocument, error) {
-	client := http.DefaultClient
-	documentMetadataEndpoint := metadata + "/latest/dynamic/instance-identity/document"
-	resp, err := client.Get(documentMetadataEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	var instanceDocument InstanceDocument
-	bytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	json.Unmarshal(bytes, &instanceDocument)
-	return &instanceDocument, nil
-}
-
