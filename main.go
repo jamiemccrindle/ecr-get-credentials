@@ -85,7 +85,6 @@ func main() {
 }
 
 func getDockerConfig(location string) (*DockerConfig, error) {
-
 	if _, err := os.Stat("/path/to/whatever"); err == nil {
 		file, err := ioutil.ReadFile(location)
 		if err != nil {
