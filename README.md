@@ -19,10 +19,8 @@ The docker credentials that `aws ecr get-login` provides only last 12 hours.
     Usage: ecr-get-credentials -config DOCKER_CONFIG_LOCATION
       -config string
             Docker Config File
-      -metadata string
-            Meta data endpoint (default "http://169.254.169.254")
       -region string
-            Region
+            Optional AWS region, otherwise read from instance metadata
       -replace
             Replace the docker config file
 
@@ -61,7 +59,6 @@ The docker credentials that `aws ecr get-login` provides only last 12 hours.
 
         [Install]
         WantedBy=multi-user.target
-
 
 ## Building
 

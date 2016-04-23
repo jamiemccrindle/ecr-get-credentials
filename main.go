@@ -24,7 +24,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	region := flag.String("region", "", "Region")
+	region := flag.String("region", "", "Optional AWS region, otherwise read from instance metadata")
 	replace := flag.Bool("replace", false, "Replace the docker config file")
 	config := flag.String("config", "", "Docker Config File")
 	flag.Parse()
