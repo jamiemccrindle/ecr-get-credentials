@@ -26,6 +26,43 @@ The docker credentials that `aws ecr get-login` provides only last 12 hours.
       -replace
             Replace the docker config file
 
+### Usage in cloud-init
+
+    - name: ecr-get-credentials.service
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        Description=ECR login
+        Requires=docker.service
+        After=docker.service
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=-/usr/bin/docker kill ecr-get-credentials
+        ExecStartPre=-/usr/bin/docker rm -f ecr-get-credentials
+        ExecStartPre=/usr/bin/docker pull jamiemccrindle/ecr-get-credentials
+        ExecStart=/usr/bin/docker run -v /home/core/:/home/core/ jamiemccrindle/ecr-get-credentials -config /home/core/.dockercfg -replace
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: ecr-get-credentials.timer
+      enable: true
+      command: start
+      content: |
+        [Unit]
+        Description=Runs ECR login every hour
+        Requires=docker.service
+        After=docker.service
+
+        [Timer]
+        OnUnitActiveSec=10h
+        Unit=ecr-get-credentials.service
+
+        [Install]
+        WantedBy=multi-user.target
+
+
 ## Building
 
     ./build.bash
