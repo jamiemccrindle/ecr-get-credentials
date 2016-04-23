@@ -1,0 +1,10 @@
+FROM alpine:latest
+
+RUN apk update && apk add ca-certificates
+
+RUN mkdir -p /go/bin
+COPY ./app /go/bin/app
+
+WORKDIR /go/bin
+
+ENTRYPOINT ["./app"]
