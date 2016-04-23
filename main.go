@@ -100,7 +100,7 @@ func getDockerConfig(location string) (*DockerConfig, error) {
 	} else if os.IsNotExist(err) {
 		return &DockerConfig{
 			Auths: make(map[string]*DockerConfigAuth),
-		}
+		}, nil
 	} else {
 		return nil, err
 	}
