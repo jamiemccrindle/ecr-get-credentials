@@ -8,6 +8,5 @@ docker build -t builder-ecr-get-credentials .
 # run builder docker image to build the 'run' image
 # share the docker socket, executable and build key
 docker run \
-    -v ~/.ssh/id_rsa:/root/.ssh/id_rsa \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(which docker):/bin/docker builder-ecr-get-credentials
