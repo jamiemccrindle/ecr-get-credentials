@@ -37,9 +37,6 @@ The docker credentials that `aws ecr get-login` provides only last 12 hours.
 
         [Service]
         Type=oneshot
-        ExecStartPre=-/usr/bin/docker kill ecr-get-credentials
-        ExecStartPre=-/usr/bin/docker rm -f ecr-get-credentials
-        ExecStartPre=/usr/bin/docker pull jamiemccrindle/ecr-get-credentials
         ExecStart=/usr/bin/docker run -v /home/core/:/home/core/ jamiemccrindle/ecr-get-credentials -config /home/core/.dockercfg -replace
 
         [Install]
