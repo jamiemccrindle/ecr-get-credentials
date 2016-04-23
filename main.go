@@ -17,10 +17,6 @@ type InstanceDocument struct {
 	Region *string
 }
 
-type DockerConfig struct {
-	Auths map[string]*DockerConfigAuth `json:"auths"`
-}
-
 type DockerConfigAuth struct {
 	Auth  *string `json:"auth"`
 	Email *string `json:"email"`
@@ -63,11 +59,11 @@ func main() {
 	}
 	none := "none"
 	for _, authorizationData := range authorizationTokenOutput.AuthorizationData {
-		auth, found := dockerConfig.Auths[*authorizationData.ProxyEndpoint]
+		_, found := dockerConfig[*authorizationData.ProxyEndpoint]
 		if found {
-			auth.Auth = authorizationData.AuthorizationToken
+			dockerConfig[*authorizationData.ProxyEndpoint].Auth = authorizationData.AuthorizationToken
 		} else {
-			dockerConfig.Auths[*authorizationData.ProxyEndpoint] = &DockerConfigAuth{
+			dockerConfig[*authorizationData.ProxyEndpoint] = &DockerConfigAuth{
 				Auth: authorizationData.AuthorizationToken,
 				Email: &none,
 			}
@@ -84,27 +80,22 @@ func main() {
 	}
 }
 
-func getDockerConfig(location string) (*DockerConfig, error) {
+func getDockerConfig(location string) (map[string]*DockerConfigAuth, error) {
 	if _, err := os.Stat("/path/to/whatever"); err == nil {
 		file, err := ioutil.ReadFile(location)
 		if err != nil {
 			return nil, err
 		}
-		var dockerConfig DockerConfig
+		var dockerConfig map[string]*DockerConfigAuth
 		json.Unmarshal(file, &dockerConfig)
-		if dockerConfig.Auths == nil {
-			dockerConfig.Auths = make(map[string]*DockerConfigAuth)
-		}
-		return &dockerConfig, nil
+		return dockerConfig, nil
 	} else if os.IsNotExist(err) {
-		return &DockerConfig{
-			Auths: make(map[string]*DockerConfigAuth),
-		}, nil
+		dockerConfig := make(map[string]*DockerConfigAuth)
+		return dockerConfig, nil
 	} else {
 		return nil, err
 	}
 }
-
 
 // request the content of a http endpoint as a string
 func getInstanceDocument(metadata string) (*InstanceDocument, error) {

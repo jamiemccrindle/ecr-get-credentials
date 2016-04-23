@@ -1,8 +1,6 @@
 {
-  "auths": {
-    "https://index.docker.io/v1/": {
-      "auth": "somethingsomething=",
-      "email": "bob@bob.com"
-    }
-  }
+	"https://index.docker.io/v1/": {
+	  "auth": "somethingsomething=",
+	  "email": "bob@bob.com"
+	}
 }
