@@ -23,6 +23,8 @@ The docker credentials that `aws ecr get-login` provides only last 12 hours.
             Optional AWS region, otherwise read from instance metadata
       -replace
             Replace the docker config file
+      -type
+            Optional argument to indicate which type of auth config style, options are config.json or .dockercfg
 
 ### Usage in cloud-init
 
