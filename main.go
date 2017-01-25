@@ -11,11 +11,16 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 type DockerConfigAuth struct {
 	Auth  *string `json:"auth"`
 	Email *string `json:"email"`
+}
+
+type DockerConfig struct {
+	Auths map[string]*DockerConfigAuth `json:"auths"`
 }
 
 func main() {
@@ -27,11 +32,23 @@ func main() {
 	region := flag.String("region", "", "Optional AWS region, otherwise read from instance metadata")
 	replace := flag.Bool("replace", false, "Replace the docker config file")
 	config := flag.String("config", "", "Docker Config File")
+	configType := flag.String("type", "", "If empty, it will autodetect, otherwise the options are .dockercfg or config.json")
+
 	flag.Parse()
 
 	if len(*config) == 0 {
 		flag.Usage()
 		return
+	}
+
+	if len(*configType) == 0 {
+		if strings.HasSuffix(*config, "dockercfg") {
+			*configType = ".dockercfg"
+		} else if strings.HasSuffix(*config, "config.json") {
+			*configType = "config.json"
+		} else {
+			log.Fatal("Could not determine config type automatically, specify it using the -type argument")
+		}
 	}
 
 	if len(*region) == 0 {
@@ -49,9 +66,29 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	dockerConfig, err := getDockerConfig(*config)
+
+	var result []byte
+
+	if *configType == ".dockercfg" {
+		result, err = updateDockerConfigVersion1(config, authorizationTokenOutput)
+	} else {
+		result, err = updateDockerConfigVersion2(config, authorizationTokenOutput)
+	}
+
 	if err != nil {
 		log.Fatalln(err)
+	}
+	if *replace {
+		ioutil.WriteFile(*config, result, 0644)
+	} else {
+		println(string(result))
+	}
+}
+
+func updateDockerConfigVersion1(config *string, authorizationTokenOutput *ecr.GetAuthorizationTokenOutput) ([]byte, error) {
+	dockerConfig, err := getDockerConfigVersion1(*config)
+	if err != nil {
+		return nil, err
 	}
 	none := "none"
 	for _, authorizationData := range authorizationTokenOutput.AuthorizationData {
@@ -66,18 +103,53 @@ func main() {
 		}
 	}
 	result, err := json.MarshalIndent(dockerConfig, "", "  ")
+	return result, err
+}
+
+func updateDockerConfigVersion2(config *string, authorizationTokenOutput *ecr.GetAuthorizationTokenOutput) ([]byte, error) {
+	dockerConfig, err := getDockerConfigVersion2(*config)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
-	if *replace {
-		ioutil.WriteFile(*config, result, 0644)
+	none := "none"
+	for _, authorizationData := range authorizationTokenOutput.AuthorizationData {
+		auth, found := dockerConfig.Auths[*authorizationData.ProxyEndpoint]
+		if found {
+			auth.Auth = authorizationData.AuthorizationToken
+		} else {
+			dockerConfig.Auths[*authorizationData.ProxyEndpoint] = &DockerConfigAuth{
+				Auth: authorizationData.AuthorizationToken,
+				Email: &none,
+			}
+		}
+	}
+	result, err := json.MarshalIndent(dockerConfig, "", "  ")
+	return result, err
+}
+
+func getDockerConfigVersion2(location string) (*DockerConfig, error) {
+	if _, err := os.Stat(location); err == nil {
+		file, err := ioutil.ReadFile(location)
+		if err != nil {
+			return nil, err
+		}
+		var dockerConfig DockerConfig
+		json.Unmarshal(file, &dockerConfig)
+		if dockerConfig.Auths == nil {
+			dockerConfig.Auths = make(map[string]*DockerConfigAuth)
+		}
+		return &dockerConfig, nil
+	} else if os.IsNotExist(err) {
+		return &DockerConfig{
+			Auths: make(map[string]*DockerConfigAuth),
+		}, nil
 	} else {
-		println(string(result))
+		return nil, err
 	}
 }
 
-func getDockerConfig(location string) (map[string]*DockerConfigAuth, error) {
-	if _, err := os.Stat("/path/to/whatever"); err == nil {
+func getDockerConfigVersion1(location string) (map[string]*DockerConfigAuth, error) {
+	if _, err := os.Stat(location); err == nil {
 		file, err := ioutil.ReadFile(location)
 		if err != nil {
 			return nil, err

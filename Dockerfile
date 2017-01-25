@@ -1,6 +1,6 @@
 FROM golang:alpine
 
-RUN apk update && apk add ca-certificates git
+RUN apk update && apk add ca-certificates git docker
 
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
